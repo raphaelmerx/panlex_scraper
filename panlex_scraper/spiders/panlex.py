@@ -7,9 +7,9 @@ from ..utils import get_text_from_element
 class PanlexIgboScraper(scrapy.Spider):
     name = 'panlex'
     allowed_domains = ['vocab.panlex.org']
-    start_url = 'https://vocab.panlex.org/ibo-000/eng-000'
 
     def start_requests(self):
+        self.start_url = f'https://vocab.panlex.org/{self.lang1}-000/{self.lang2}-000'
         yield scrapy.Request(url=self.start_url, callback=self.parse)
 
     def extract_cell_text(self, cell):
@@ -24,8 +24,8 @@ class PanlexIgboScraper(scrapy.Spider):
         for row in rows:
             cells = row.css('td')
             yield {
-                'ibo': self.extract_cell_text(cells[0]),
-                'eng': self.extract_cell_text(cells[1])
+                self.lang1: self.extract_cell_text(cells[0]),
+                self.lang2: self.extract_cell_text(cells[1])
             }
 
         next_button = response.css('main nav .pagination-next')
