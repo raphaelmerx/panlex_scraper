@@ -10,14 +10,22 @@ class PanlexIgboScraper(scrapy.Spider):
 
     def start_requests(self):
         self.start_url = f'https://vocab.panlex.org/{self.lang1}-000/{self.lang2}-000'
-        yield scrapy.Request(url=self.start_url, callback=self.parse)
+        yield scrapy.Request(url=self.start_url, callback=self.parse_first_page)
 
-    def extract_cell_text(self, cell):
-        if cell.css('summary'):
-            return get_text_from_element(cell.css('summary'))
-        return get_text_from_element(cell)
+    def parse_first_page(self, response):
+        """ Parsing of the first page.
 
-    def parse(self, response):
+        Will find the last page number and yield requests for all pages.
+        """
+        yield from self.parse_page(response)
+
+        last_page_number = response.css('main nav .pagination-list li')[-1].css('.pagination-link::text').get()
+        last_page_number = int(last_page_number)
+        for i in range(2, last_page_number + 1):
+            url = self.start_url + f'?page={i}'
+            yield scrapy.Request(url=url, callback=self.parse_page)
+
+    def parse_page(self, response):
         """ Parsing of a page. """
 
         rows = response.css('table tbody tr')
@@ -28,7 +36,7 @@ class PanlexIgboScraper(scrapy.Spider):
                 self.lang2: self.extract_cell_text(cells[1])
             }
 
-        next_button = response.css('main nav .pagination-next')
-        if next_button:
-            url = self.start_url + next_button.css('::attr(href)').getall()[0]
-            yield scrapy.Request(url=url, callback=self.parse)
+    def extract_cell_text(self, cell):
+        if cell.css('summary'):
+            return get_text_from_element(cell.css('summary'))
+        return get_text_from_element(cell)
